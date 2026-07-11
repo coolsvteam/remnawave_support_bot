@@ -39,7 +39,7 @@ read -p "Пользователь БД                [нажмите enter дл
 PG_USER=${PG_USER:-postgres}
 
 read -p "Название Docker-сети панели    [нажмите enter для установки значения по умолчанию remnawave-network]: " NET_NAME
-NET_NAME=${EXTERNAL_NETWORK_NAME:-remnawave-network}
+NET_NAME=${NET_NAME:-remnawave-network}
 
 read -p "Пароль от БД                   [найди файл .env панели Remnawave и в нем найди строку POSTGRES_PASSWORD= ]: " PG_PASS
 
