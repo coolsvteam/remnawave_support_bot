@@ -10,6 +10,8 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
+mkdir -p data
+
 if [ -f .env ]; then
     echo "ВНИМАНИЕ: Файл .env уже существует!"
     read -p "Перезаписать его? (y/n): " confirm
@@ -25,6 +27,7 @@ read -p "Введите название вашего проекта (напри
 read -p "Введите токен бота (от BotFather): " TELEGRAM_TOKEN
 read -p "Введите ID админ-группы (начинается с -100): " ADMIN_GROUP_ID
 read -p "Введите ID темы для логов/банов (например, 22): " BANS_TOPIC_ID
+read -p "Введите время автозакрытия тикета в часах [24]): " AUTO_CLOSE_HOURS
 
 echo ""
 echo "--- НАСТРОЙКА БАЗЫ ДАННЫХ REMNAWAVE ---"
@@ -55,7 +58,7 @@ PG_DB=$PG_DB
 PG_USER=$PG_USER
 PG_PASS=$PG_PASS
 EXTERNAL_NETWORK_NAME=$NET_NAME
-AUTO_CLOSE_HOURS=$AUTO_CLOSE_HOURS
+AUTO_CLOSE_HOURS=${AUTO_CLOSE_HOURS:-24}
 TZ=Europe/Moscow
 EOT
 
