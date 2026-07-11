@@ -317,21 +317,22 @@ def handle_private(message):
             run_query("INSERT INTO tickets (ticket_id, uid, thread_id, status, created_at, last_activity) VALUES (?, ?, ?, 'open', ?, ?)", 
                       (t_id, uid, topic.message_thread_id, time.time(), time.time()))
             bot.send_message(
-    message.chat.id,
-    """
-✅ Ваш тикет создан!
+                message.chat.id,
+                """
+            ✅ Ваш тикет создан!
 
-Пожалуйста, отправьте:
+            Пожалуйста, отправьте:
 
-• описание проблемы;
-• вашу операционную систему;
-• используемый протокол подключения;
-• скриншот ошибки (если есть).
+            • описание проблемы;
+            • вашу операционную систему;
+            • используемый протокол подключения;
+            • скриншот ошибки (если есть).
 
-Специалист SecureWeb ответит вам в ближайшее время.
-""",
-    reply_markup=get_active_menu()
-)
+            Специалист SecureWeb ответит вам в ближайшее время.
+            """,
+                reply_markup=get_active_menu()
+            )
+
         except Exception as e:
             bot.send_message(message.chat.id, "⚠️ Ошибка при создании тикета. Попробуйте позже.")
             logger.error(f"Topic error: {e}")
@@ -363,4 +364,9 @@ def admin_close(call):
         bot.send_message(uid, "🔒 Ваш тикет был закрыт поддержкой.", reply_markup=get_main_menu())
         bot.answer_callback_query(call.id, "Тикет закрыт")
 
-bot.infinity_polling()
+logger.info("Support Bot запущен")
+
+bot.infinity_polling(
+    timeout=60,
+    long_polling_timeout=60
+)
