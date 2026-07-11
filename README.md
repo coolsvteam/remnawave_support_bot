@@ -13,7 +13,7 @@
 
 ## 🚀 Установка за 1 минуту
 
-Мы подготовили интерактивный мастер установки, который сам всё проверит и настроит:
+Интерактивный мастер установки, который сам всё проверит и настроит:
 
 `git clone https://github.com/GH-Sa1n/remnawave_bedolaga_support_bot.git`
 `cd remnawave_bedolaga_support_bot`
