@@ -20,7 +20,7 @@ if [ -f .env ]; then
 fi
 
 echo "--- НАСТРОЙКА БОТА ---"
-read -p "Название вашего проекта (например, My VPN): " PROJECT_NAME
+read -p "Название вашего проекта (например, SecureWeb Support): " PROJECT_NAME
 read -p "Токен бота (от BotFather): " TELEGRAM_TOKEN
 read -p "ID админ-группы (начинается с -100): " ADMIN_GROUP_ID
 read -p "ID темы для логов/банов (например, 22): " BANS_TOPIC_ID
