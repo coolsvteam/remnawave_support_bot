@@ -8,6 +8,14 @@ import threading
 import datetime
 import sqlite3
 import psycopg2 # Драйвер для Postgres
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s"
+)
+
+logger = logging.getLogger(__name__)
 
 # --- КОНФИГУРАЦИЯ ---
 
@@ -17,19 +25,22 @@ ADMIN_GROUP_ID = int(os.getenv('ADMIN_GROUP_ID', '0'))
 BANS_TOPIC_ID = int(os.getenv('BANS_TOPIC_ID', '1'))
 AUTO_CLOSE_HOURS = int(os.getenv('AUTO_CLOSE_HOURS', '24'))
 
-PG_HOST = os.getenv('PG_HOST', 'remnawave_bot_db')
-PG_DB = os.getenv('PG_DB', 'remnawave_bot')
-PG_USER = os.getenv('PG_USER', 'remnawave_user')
+PG_HOST = os.getenv('PG_HOST', 'remnawave-db')
+PG_DB = os.getenv('PG_DB', 'postgres')
+PG_USER = os.getenv('PG_USER', 'postgres')
 PG_PASS = os.getenv('PG_PASS', '')
 
 # Локальная БД саппорта (для тикетов и банов)
-DB_PATH = "support.db"
+DB_PATH = "data/support.db"
 db_lock = threading.Lock()
 
 bot = telebot.TeleBot(TOKEN)
 
 # --- ФУНКЦИЯ ПРОВЕРКИ ПОДПИСКИ (Postgres) ---
 def get_remnawave_info(tg_id):
+
+    conn = None
+
     try:
         conn = psycopg2.connect(
             host=PG_HOST,
@@ -134,10 +145,8 @@ def get_remnawave_info(tg_id):
         return f"⚠️ Ошибка связи с БД:\n<code>{e}</code>"
 
     finally:
-        try:
+        if conn:
             conn.close()
-        except:
-            pass
 
 # --- ЛОГИКА ЛОКАЛЬНОЙ БД (SQLite) ---
 def run_query(query, params=(), fetch=False, fetchall=False):
@@ -155,10 +164,61 @@ def init_db():
 
 init_db()
 
+def auto_close_worker():
+    while True:
+        try:
+            limit = time.time() - AUTO_CLOSE_HOURS * 3600
+
+            tickets = run_query(
+                """
+                SELECT uid, thread_id 
+                FROM tickets
+                WHERE status='open'
+                AND last_activity<?
+                """,
+                (limit,),
+                fetchall=True
+            )
+
+            for uid, thread_id in tickets:
+                run_query(
+                    """
+                    UPDATE tickets
+                    SET status='closed'
+                    WHERE thread_id=?
+                    """,
+                    (thread_id,)
+                )
+
+                bot.close_forum_topic(
+                    ADMIN_GROUP_ID,
+                    thread_id
+                )
+
+                bot.send_message(
+                    uid,
+                    "⌛ Ваш тикет был автоматически закрыт из-за отсутствия активности.",
+                    reply_markup=get_main_menu()
+                )
+
+        except Exception as e:
+            logger.error(f"Auto close error: {e}")
+
+        time.sleep(600)
+
 # --- КЛАВИАТУРЫ ---
+
 def get_main_menu():
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(types.KeyboardButton("🎫 Открыть новый тикет"))
+
+    markup = types.ReplyKeyboardMarkup(
+        resize_keyboard=True
+    )
+
+    markup.add(
+        types.KeyboardButton("🎫 Открыть новый тикет"),
+        types.KeyboardButton("📊 Моя подписка")
+    )
+
     return markup
 
 def get_active_menu():
@@ -174,12 +234,40 @@ def get_admin_buttons(user_id):
     )
     return kb
 
+threading.Thread(
+    target=auto_close_worker,
+    daemon=True
+).start()
+
 # --- ОБРАБОТКА ТИКЕТОВ ---
 @bot.message_handler(commands=['start'])
 def handle_start(message):
     row = run_query("SELECT is_banned FROM users WHERE uid=?", (message.from_user.id,), fetch=True)
     if row and row[0] == 1: return bot.send_message(message.chat.id, "❌ Доступ закрыт.")
-    bot.send_message(message.chat.id, f"👋 {PROJECT_NAME}. Нажмите кнопку ниже для связи.", reply_markup=get_main_menu())
+    bot.send_message(
+    message.chat.id,
+    f"""
+👋 Приветствуем, {html.escape(message.from_user.first_name)}!
+
+Вы обратились в службу поддержки SecureWeb.
+
+Напишите Ваш вопрос, и мы ответим вам в ближайшее время.
+
+Чтобы мы решили вашу проблему быстрее, укажите сразу:
+
+1️⃣ Вашу операционную систему:
+iOS / Android / Windows / macOS / Linux
+
+2️⃣ Тип подключения:
+VLESS / Hysteria / другой протокол
+
+3️⃣ Скриншот ошибки, если она есть
+
+Нажмите кнопку ниже для связи 👇
+""",
+    parse_mode="HTML",
+    reply_markup=get_main_menu()
+)
 @bot.message_handler(content_types=['text', 'photo', 'video', 'document', 'voice'], func=lambda m: m.chat.type == 'private')
 def handle_private(message):
     uid = message.from_user.id
@@ -188,6 +276,18 @@ def handle_private(message):
     if row and row[0] == 1: return
 
     ticket = run_query("SELECT ticket_id, thread_id FROM tickets WHERE uid=? AND status='open'", (uid,), fetch=True)
+
+    if message.text == "📊 Моя подписка":
+
+        info = get_remnawave_info(uid)
+
+        bot.send_message(
+            message.chat.id,
+            info,
+            parse_mode="HTML"
+        )
+
+        return
 
     if message.text == "🎫 Открыть новый тикет":
         if ticket: return bot.send_message(message.chat.id, "У вас уже есть открытый тикет.")
@@ -213,10 +313,25 @@ def handle_private(message):
             )
             run_query("INSERT INTO tickets (ticket_id, uid, thread_id, status, created_at, last_activity) VALUES (?, ?, ?, 'open', ?, ?)", 
                       (t_id, uid, topic.message_thread_id, time.time(), time.time()))
-            bot.send_message(message.chat.id, "✅ Тикет открыт. Напишите ваш вопрос.", reply_markup=get_active_menu())
+            bot.send_message(
+    message.chat.id,
+    """
+✅ Ваш тикет создан!
+
+Пожалуйста, отправьте:
+
+• описание проблемы;
+• вашу операционную систему;
+• используемый протокол подключения;
+• скриншот ошибки (если есть).
+
+Специалист SecureWeb ответит вам в ближайшее время.
+""",
+    reply_markup=get_active_menu()
+)
         except Exception as e:
             bot.send_message(message.chat.id, "⚠️ Ошибка при создании тикета. Попробуйте позже.")
-            print(f"Topic error: {e}")
+            logger.error(f"Topic error: {e}")
 
     elif message.text == "❌ Закрыть текущий тикет":
         if ticket:
