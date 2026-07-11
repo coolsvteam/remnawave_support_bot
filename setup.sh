@@ -28,18 +28,18 @@ read -p "Автозакрытие тикета (впемя в часах): " AUT
 
 echo ""
 echo "--- НАСТРОЙКА БАЗЫ ДАННЫХ REMNAWAVE ---"
-read -p "Хост БД [remnawave-db]: " PG_HOST
+read -p "Хост БД [просто нажмите enter для установки remnawave-db]: " PG_HOST
 PG_HOST=${PG_HOST:-remnawave-db}
 
-read -p "Имя БД [postgres]: " PG_DB
+read -p "Имя БД [просто нажмите enter для установки postgres]: " PG_DB
 PG_DB=${PG_DB:-postgres}
 
-read -p "Пользователь БД [postgres]: " PG_USER
+read -p "Пользователь БД [просто нажмите enter для установки postgres]: " PG_USER
 PG_USER=${PG_USER:-postgres}
 
 read -p "Пароль от БД (см. инструкцию): " PG_PASS
 
-read -p "Название Docker-сети панели (remnawave-network): " NET_NAME
+read -p "Название Docker-сети панели (просто нажмите enter для установки remnawave-network): " NET_NAME
 NET_NAME=${EXTERNAL_NETWORK_NAME:-remnawave-network}
 
 echo "Создаю .env файл..."
