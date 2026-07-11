@@ -15,10 +15,10 @@
 
 Интерактивный мастер установки, который сам всё проверит и настроит:
 
-`git clone https://github.com/coolsvteam/Remnawave_support_bot.git`
+git clone https://github.com/coolsvteam/Remnawave_support_bot.git
 cd remnawave_bedolaga_support_bot
 chmod +x setup.sh
-./setup.sh`
+./setup.sh
 
 ### Шпаргалка: что спросит установщик
 1. **Токен бота:** Получите его у @BotFather.
