@@ -24,6 +24,7 @@ read -p "Название вашего проекта (например, My VPN)
 read -p "Токен бота (от BotFather): " TELEGRAM_TOKEN
 read -p "ID админ-группы (начинается с -100): " ADMIN_GROUP_ID
 read -p "ID темы для логов/банов (например, 22): " BANS_TOPIC_ID
+read -p "Автозакрытие тикета (впемя в часах): " AUTO_CLOSE_HOURS
 
 echo ""
 echo "--- НАСТРОЙКА БАЗЫ ДАННЫХ REMNAWAVE ---"
