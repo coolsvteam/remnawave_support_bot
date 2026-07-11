@@ -23,7 +23,6 @@ cd /root
 rm -rf Remnawave_support_bot
 git clone https://github.com/coolsvteam/Remnawave_support_bot.git
 cd Remnawave_support_bot
-mkdir data
 chmod +x setup.sh
 ./setup.sh
 ```
