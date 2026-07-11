@@ -27,16 +27,16 @@ read -p "ID темы для логов/банов (например, 22): " BANS
 
 echo ""
 echo "--- НАСТРОЙКА БАЗЫ ДАННЫХ REMNAWAVE ---"
-read -p "Хост БД [remnawave_bot_db]: " PG_HOST
-PG_HOST=${PG_HOST:-remnawave_bot_db}
+read -p "Хост БД [remnawave-db]: " PG_HOST
+PG_HOST=${PG_HOST:-remnawave-db}
 
-read -p "Имя БД [remnawave_bot]: " PG_DB
-PG_DB=${PG_DB:-remnawave_bot}
+read -p "Имя БД [postgres]: " PG_DB
+PG_DB=${PG_DB:-postgres}
 
-read -p "Пользователь БД [remnawave_user]: " PG_USER
-PG_USER=${PG_USER:-remnawave_user}
+read -p "Пользователь БД [postgres]: " PG_USER
+PG_USER=${PG_USER:-postgres}
 
-read -p "Пароль от БД: " PG_PASS
+read -p "Пароль от БД (выполните в терминале cd /opt/remnawave  # или где у вас установлена панель и затем cat .env | grep -iE "DB_|POSTGRES|DATABASE"): " PG_PASS
 
 read -p "Название Docker-сети панели (docker network ls): " NET_NAME
 
