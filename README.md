@@ -22,7 +22,7 @@ cd /root
 
 rm -rf Remnawave_support_bot  # Удаляем то, что уже скачали
 
-git clone https://github.com/coolsvteam/Remnawave_support_bot.git
+git clone https://github.com/coolsvteam/remnawave_support_bot.git
 
 cd Remnawave_support_bot
 
