@@ -37,7 +37,7 @@ PG_DB=${PG_DB:-postgres}
 read -p "Пользователь БД [нажмите enter для установки по умолчанию postgres]: " PG_USER
 PG_USER=${PG_USER:-postgres}
 
-read -p "Пароль от БД (выполни в терминале cd /opt/remnawave # или где у вас установлена панель и cat .env | grep -iE "DB_|POSTGRES|DATABASE" см. инструкцию): " PG_PASS
+read -p "Пароль от БД (выполни в терминале на сервере панели: cd /opt/remnawave && cat .env | grep -iE 'DB_|POSTGRES|DATABASE'): " PG_PASS
 
 read -p "Название Docker-сети панели [нажмите enter для установки по умолчанию remnawave-network]: " NET_NAME
 NET_NAME=${EXTERNAL_NETWORK_NAME:-remnawave-network}
