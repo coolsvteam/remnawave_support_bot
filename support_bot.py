@@ -85,7 +85,7 @@ def get_remnawave_info(tg_id):
             row = cur.fetchone()
 
             if row is None:
-                return "❌ Пользователь не найден в RemnaWave"
+                return " Пользователь не найден в RemnaWave"
 
             (t_id, uuid, username, email, telegram_id, status,
              created_at, expire_at, traffic_limit, traffic_strategy,
@@ -132,10 +132,10 @@ def get_remnawave_info(tg_id):
                 f"📧 <b>Email:</b> {email if email else '—'}\n"
                 f"📱 <b>Telegram ID:</b> {telegram_id if telegram_id else '—'}\n\n"
                 f"📅 <b>Создан:</b> {created}\n"
-                f"🚀 <b>Первое подключение:</b> {first_conn}\n"
+                f" <b>Первое подключение:</b> {first_conn}\n"
                 f"⏳ <b>Подписка до:</b> {expire}\n\n"
                 f"📦 <b>Лимит:</b> {traffic_limit_gb:.2f} GB\n"
-                f"📊 <b>Использовано:</b> {traffic_used_gb:.2f} GB\n"
+                f" <b>Использовано:</b> {traffic_used_gb:.2f} GB\n"
                 f"✅ <b>Осталось:</b> {traffic_left_gb:.2f} GB\n"
                 f"🔄 <b>Сброс трафика:</b> {strategy_text}\n\n"
                 f"📈 <b>За всё время:</b> {round((lifetime_used or 0)/1024**3,2):.2f} GB\n\n"
@@ -225,10 +225,23 @@ def get_active_menu():
     return markup
 
 def get_admin_buttons(user_id):
+    """Кнопки под карточкой тикета (3 кнопки в 2 ряда)"""
     kb = types.InlineKeyboardMarkup(row_width=2)
     kb.add(
         types.InlineKeyboardButton("🔒 Закрыть", callback_data=f"force_close_{user_id}"),
         types.InlineKeyboardButton("🚫 Забанить", callback_data=f"banmenu_{user_id}")
+    )
+    kb.add(
+        types.InlineKeyboardButton("✅ Разбанить", callback_data=f"unban_{user_id}")
+    )
+    return kb
+
+def get_admin_banned_buttons(user_id):
+    """Кнопки после бана - только Закрыть и Разбанить"""
+    kb = types.InlineKeyboardMarkup(row_width=2)
+    kb.add(
+        types.InlineKeyboardButton("🔒 Закрыть", callback_data=f"force_close_{user_id}"),
+        types.InlineKeyboardButton("✅ Разбанить", callback_data=f"unban_{user_id}")
     )
     return kb
 
@@ -240,14 +253,14 @@ threading.Thread(target=auto_close_worker, daemon=True).start()
 def handle_start(message):
     row = run_query("SELECT is_banned FROM users WHERE uid=?", (message.from_user.id,), fetch=True)
     if row and row[0] == 1:
-        return bot.send_message(message.chat.id, "❌ Доступ закрыт.")
+        return bot.send_message(message.chat.id, " Доступ закрыт.")
     
     welcome_text = (
         f"👋 Приветствуем, {html.escape(message.from_user.first_name)}!\n\n"
         f"Вы обратились в службу поддержки SecureWeb.\n"
         f"Напишите Ваш вопрос, и мы ответим Вам в ближайшее время.\n\n"
         f"<b>Чтобы мы решили Вашу проблему быстрее, укажите сразу:</b>\n\n"
-        f"1️⃣ Вашу операционную систему:\n"
+        f"1️ Вашу операционную систему:\n"
         f"iOS / Android / Windows / macOS / Linux\n\n"
         f"2️⃣ Тип подключения:\n"
         f"VLESS / Hysteria / другой протокол\n\n"
@@ -274,7 +287,7 @@ def handle_ticket_command(message):
     if ticket:
         return bot.send_message(
             message.chat.id,
-            "⚠️ У вас уже есть открытый тикет. Дождитесь ответа поддержки.",
+            "️ У вас уже есть открытый тикет. Дождитесь ответа поддержки.",
             reply_markup=get_main_menu()
         )
     
@@ -285,7 +298,7 @@ def handle_ticket_command(message):
     user_info = get_remnawave_info(uid)
     
     try:
-        topic = bot.create_forum_topic(ADMIN_GROUP_ID, f"⏳ {t_id} | {message.from_user.first_name}")
+        topic = bot.create_forum_topic(ADMIN_GROUP_ID, f" {t_id} | {message.from_user.first_name}")
         bot.send_message(
             ADMIN_GROUP_ID,
             f"🆕 <b>Новое обращение: {t_id}</b>\n"
@@ -362,6 +375,69 @@ def handle_menu_command(message):
         reply_markup=get_main_menu()
     )
 
+@bot.message_handler(commands=['unban'])
+def admin_unban(message):
+    """Разбан пользователя (только для админов)"""
+    ADMIN_IDS = [540087018]
+    
+    if message.from_user.id not in ADMIN_IDS:
+        return bot.send_message(message.chat.id, " Недостаточно прав")
+    
+    if len(message.text.split()) < 2:
+        if message.reply_to_message:
+            uid = message.reply_to_message.from_user.id
+            run_query("UPDATE users SET is_banned=0 WHERE uid=?", (uid,))
+            return bot.send_message(
+                message.chat.id, 
+                f"✅ Пользователь <code>{uid}</code> разбанен!", 
+                parse_mode="HTML"
+            )
+        return bot.send_message(
+            message.chat.id, 
+            "📝 Использование:\n"
+            "• <code>/unban 123456789</code> - по ID\n"
+            "• Ответьте на сообщение пользователя командой <code>/unban</code>",
+            parse_mode="HTML"
+        )
+    
+    try:
+        uid = int(message.text.split()[1])
+        run_query("UPDATE users SET is_banned=0 WHERE uid=?", (uid,))
+        bot.send_message(
+            message.chat.id, 
+            f"✅ Пользователь <code>{uid}</code> разбанен!",
+            parse_mode="HTML"
+        )
+        try:
+            bot.send_message(uid, "✅ Вы были разбанены службой поддержки.")
+        except:
+            pass
+    except Exception as e:
+        logger.error(f"Unban error: {e}")
+        bot.send_message(message.chat.id, "❌ Ошибка разбана")
+
+@bot.message_handler(commands=['banned'])
+def show_banned(message):
+    """Показать список забаненных пользователей"""
+    ADMIN_IDS = [540087018]
+    
+    if message.from_user.id not in ADMIN_IDS:
+        return bot.send_message(message.chat.id, "❌ Недостаточно прав")
+    
+    banned = run_query("SELECT uid, ban_reason FROM users WHERE is_banned=1", fetchall=True)
+    
+    if not banned:
+        return bot.send_message(message.chat.id, "✅ Забаненных пользователей нет")
+    
+    text = "🚫 <b>Забаненные пользователи:</b>\n\n"
+    for uid, reason in banned:
+        text += f"• <code>{uid}</code>"
+        if reason:
+            text += f" - {reason}"
+        text += "\n"
+    
+    bot.send_message(message.chat.id, text, parse_mode="HTML")
+
 # --- ОБРАБОТКА ТЕКСТОВЫХ СООБЩЕНИЙ И КНОПОК ---
 @bot.message_handler(content_types=['text', 'photo', 'video', 'document', 'voice'], func=lambda m: m.chat.type == 'private')
 def handle_private(message):
@@ -379,16 +455,14 @@ def handle_private(message):
         return
 
     if message.text == "🎫 Открыть новый тикет":
-        # Вызываем ту же логику что и для /ticket
         handle_ticket_command(message)
         return
 
     if message.text == "❌ Закрыть текущий тикет":
-        # Вызываем ту же логику что и для /close
         handle_close_command(message)
         return
     
-    # Обработка обычных сообщений
+    # Обработка обычных сообщений - БЕЗ КНОПОК под каждым сообщением
     if not ticket:
         return bot.send_message(
             message.chat.id,
@@ -397,11 +471,42 @@ def handle_private(message):
         )
     
     try:
-        bot.copy_message(ADMIN_GROUP_ID, message.chat.id, message.message_id, message_thread_id=ticket[1])
+        # Просто копируем сообщение в админскую тему (без кнопок)
+        bot.copy_message(
+            ADMIN_GROUP_ID, 
+            message.chat.id, 
+            message.message_id, 
+            message_thread_id=ticket[1]
+        )
+        
         run_query("UPDATE tickets SET last_activity=? WHERE uid=? AND status='open'", (time.time(), uid))
     except Exception as e:
-        bot.send_message(message.chat.id, "⚠️ Ошибка отправки сообщения.")
+        bot.send_message(message.chat.id, "️ Ошибка отправки сообщения.")
         logger.error(f"Send message error: {e}")
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("unban_"))
+def admin_unban_callback(call):
+    """Разбан пользователя по кнопке"""
+    uid = int(call.data.split("_")[1])
+    
+    run_query("UPDATE users SET is_banned=0 WHERE uid=?", (uid,))
+    
+    bot.answer_callback_query(call.id, "✅ Пользователь разбанен")
+    
+    # Возвращаем полный набор кнопок после разбана
+    bot.edit_message_reply_markup(
+        call.message.chat.id, 
+        call.message.message_id, 
+        reply_markup=get_admin_buttons(uid)
+    )
+    
+    # Уведомляем пользователя
+    try:
+        bot.send_message(uid, "✅ Вы были разбанены службой поддержки SecureWeb.")
+    except:
+        pass
+    
+    logger.info(f"Admin unbanned user {uid} via callback")
 
 @bot.message_handler(func=lambda m: m.chat.id == ADMIN_GROUP_ID and m.message_thread_id is not None)
 def handle_admin_reply(message):
@@ -444,7 +549,12 @@ def ban_user(call):
     except:
         pass
     bot.answer_callback_query(call.id, "Пользователь заблокирован")
-    bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=None)
+    # После бана показываем кнопки "Закрыть" и "Разбанить" (без "Забанить")
+    bot.edit_message_reply_markup(
+        call.message.chat.id, 
+        call.message.message_id, 
+        reply_markup=get_admin_banned_buttons(uid)
+    )
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("cancel_"))
 def cancel_ban(call):
